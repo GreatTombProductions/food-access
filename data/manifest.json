@@ -1,0 +1,13 @@
+{
+  "name": "Food Access Research Atlas",
+  "total_counties": 3136,
+  "total_tracts": 72531,
+  "total_pop": 308745538,
+  "food_desert_counties": 2080,
+  "num_detail_shards": 256,
+  "letter_shards": 26,
+  "data_source": "USDA Economic Research Service",
+  "data_date": "2019",
+  "data_url": "https://www.ers.usda.gov/data-products/food-access-research-atlas/",
+  "built": 3136
+}

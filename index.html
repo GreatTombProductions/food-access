@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Access Atlas — Is Your County a Food Desert?</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --text: #e0e0e0;
+    --text2: #a0a0b0;
+    --accent: #4ecca3;
+    --accent2: #0f3460;
+    --good: #4ecca3;
+    --warn: #f39c12;
+    --bad: #e74c3c;
+    --border: #2a2a4a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  header { text-align: center; padding: 40px 20px 20px; }
+  header h1 { font-size: 1.8em; color: var(--accent); margin-bottom: 6px; }
+  header p { color: var(--text2); font-size: 0.95em; }
+
+  .modes { display: flex; gap: 8px; margin: 0 auto 20px; max-width: 500px; }
+  .modes button { flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 0.9em; border-radius: 6px; transition: all 0.2s; }
+  .modes button.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+  .modes button:hover:not(.active) { background: var(--surface2); }
+
+  .search-box { max-width: 600px; margin: 0 auto 30px; }
+  .search-box input { width: 100%; padding: 14px 18px; font-size: 1em; border: 2px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; outline: none; }
+  .search-box input:focus { border-color: var(--accent); }
+
+  .results { max-width: 700px; margin: 0 auto; }
+  .result-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  .result-item:hover { background: var(--surface); }
+  .result-item .name { flex: 1; font-weight: 600; }
+  .result-item .location { color: var(--text2); font-size: 0.85em; margin-right: 12px; }
+  .result-item .metrics { display: flex; gap: 16px; font-size: 0.85em; flex-shrink: 0; }
+  .result-item .metric { text-align: center; }
+  .result-item .metric .val { font-weight: 700; }
+  .result-item .metric .label { font-size: 0.75em; color: var(--text2); }
+
+  .detail-panel { background: var(--surface); border-radius: 10px; padding: 24px; margin: 20px auto; max-width: 700px; display: none; }
+  .detail-panel.active { display: block; }
+  .detail-panel .back { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9em; padding: 0; margin-bottom: 16px; }
+  .detail-panel h2 { font-size: 1.4em; margin-bottom: 4px; }
+  .detail-panel .subtitle { color: var(--text2); margin-bottom: 16px; font-size: 0.9em; }
+  .detail-panel .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .detail-panel .tag { padding: 3px 10px; border-radius: 12px; font-size: 0.78em; background: var(--surface2); border: 1px solid var(--border); }
+  .detail-panel .tag.desert { background: #3a1520; border-color: #803040; color: #ff8090; }
+  .detail-panel .tag.warn { background: #2d2000; border-color: #604010; color: #f0c060; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .metric-card { background: var(--surface2); border-radius: 8px; padding: 14px; text-align: center; }
+  .metric-card .big { font-size: 1.5em; font-weight: 700; }
+  .metric-card .big.good { color: var(--good); }
+  .metric-card .big.warn { color: var(--warn); }
+  .metric-card .big.bad { color: var(--bad); }
+  .metric-card .small { font-size: 0.78em; color: var(--text2); margin-top: 4px; }
+
+  .section { margin-bottom: 16px; }
+  .section h3 { font-size: 0.95em; color: var(--accent); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-row .label { width: 200px; font-size: 0.85em; flex-shrink: 0; }
+  .bar-row .bar-track { flex: 1; height: 20px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .bar-row .bar-fill { height: 100%; transition: width 0.3s; }
+  .bar-row .pct { width: 50px; font-size: 0.85em; text-align: right; flex-shrink: 0; }
+
+  .state-list { max-width: 700px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .state-card { background: var(--surface); border-radius: 8px; padding: 14px; cursor: pointer; transition: background 0.15s; }
+  .state-card:hover { background: var(--surface2); }
+  .state-card .st-name { font-weight: 700; margin-bottom: 4px; }
+  .state-card .st-stats { font-size: 0.8em; color: var(--text2); display: flex; gap: 12px; }
+
+  .source-note { text-align: center; color: var(--text2); font-size: 0.78em; margin-top: 40px; padding: 20px; }
+  .source-note a { color: var(--accent); }
+
+  .no-results { text-align: center; padding: 40px; color: var(--text2); }
+  .loading { text-align: center; padding: 40px; color: var(--text2); }
+
+  @media (max-width: 600px) {
+    .container { padding: 12px; }
+    .result-item { flex-wrap: wrap; }
+    .result-item .metrics { width: 100%; margin-top: 8px; justify-content: flex-start; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .state-list { grid-template-columns: 1fr; }
+    .bar-row .label { width: 120px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🥬 Food Access Atlas</h1>
+    <p>3,136 U.S. counties — food deserts, low-access populations, and supermarket distance. USDA data.</p>
+  </header>
+
+  <div class="modes">
+    <button id="mode-search" class="active" onclick="setMode('search')">🔍 County Search</button>
+    <button id="mode-state" onclick="setMode('state')">🗺️ By State</button>
+  </div>
+
+  <div id="search-section">
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Type a county name..." autofocus oninput="handleSearch()">
+    </div>
+    <div id="search-results" class="results"></div>
+  </div>
+
+  <div id="state-section" style="display:none;">
+    <div id="state-list" class="state-list"></div>
+    <div id="state-counties" class="results" style="display:none;"></div>
+  </div>
+
+  <div id="detail-panel" class="detail-panel"></div>
+
+  <div class="source-note">
+    Data from the <a href="https://www.ers.usda.gov/data-products/food-access-research-atlas/" target="_blank">USDA Economic Research Service Food Access Research Atlas</a> (2019).
+    A "food desert" is a low-income census tract where residents have low access to a supermarket. This is an independent tool — not affiliated with any government agency.
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
